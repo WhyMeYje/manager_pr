@@ -1,0 +1,3 @@
+/Users/macbook/manager_pr/build/CMakeFiles/manager_pr.dir
+/Users/macbook/manager_pr/build/CMakeFiles/edit_cache.dir
+/Users/macbook/manager_pr/build/CMakeFiles/rebuild_cache.dir
