@@ -12,14 +12,14 @@ struct processInfo {
     int pid;
     double cpu;
     // std::string time;
-    double memory;
-    std::string command;
+    double mem;
+    std::string comm;
 };
 
 void setRawMode(bool enable) {
     static struct termios oldt, newt;
     if (enable) {
-        tcgetattr(STDIN_FILENO, &oldt);
+        if (tcgetattr(STDIN_FILENO, &oldt) == -1) return;
         newt = oldt;
         newt.c_lflag &= ~(ICANON | ECHO);
         tcsetattr(STDIN_FILENO, TCSANOW, &newt);

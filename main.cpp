@@ -6,7 +6,12 @@
 #include <thread>
 #include <chrono>
 
-#include "main.h"
+struct processInfo {
+    int pid;
+    double cpu;
+    double mem;
+    std::string comm;
+};
 
 #define BUFFER 256
 
@@ -17,7 +22,6 @@ int main() {
 
     string procName; 
     cout << "Enter name of searching process (all - for all): ";
-    cin.ignore();
     getline(cin, procName);
 
     char buffer[BUFFER];
@@ -26,22 +30,14 @@ int main() {
     vector<processInfo> procInfo;
 
     bool progLeave = false;
-    setRawMode(true);
+    // setRawMode(true); // если реализовано
 
-    int maxProcLen;
+    int maxProcLen = 20;
 
-    while(!progLeave) {
-        size_t termWidth = getTermSize();
-        const size_t pidWidth = 12;
-        int procLabelSize = 15;
-        maxProcLen = termWidth - pidWidth - procLabelSize - 2;
-        if (maxProcLen < 8) {
-            maxProcLen = 8;
-        }
-
-        FILE* pipe = popen("ps -A -o pid,%cpu,%mem,comm", "r");
+    while (!progLeave) {
+        FILE* pipe = popen("ps aux", "r");
         if (!pipe) {
-            setRawMode(false);
+            // setRawMode(false);
             cout << "Error: can't open pipe" << endl;
             exit(EXIT_FAILURE); 
         }
@@ -53,64 +49,51 @@ int main() {
         cout << "PID\t\tCPU\t\tMEM\t\tCOMM\n";
 
         bool isFirstLine = true;
-        while(fgets(buffer, BUFFER, pipe) != NULL) {
+        while (fgets(buffer, BUFFER, pipe) != NULL) {
             if (isFirstLine) {
                 isFirstLine = false;
                 continue;
             }
-
-            istringstream iss(buffer);
+            std::istringstream iss(buffer);
+            std::string user;
             int pid;
-            double cpu;
-            double mem;
-            string comm;
+            double cpu, mem;
+            std::string vsz, rss, tty, stat, start, time, comm;
 
-            if (iss >> pid >> cpu >> mem >> comm) {
-                getline(iss >> ws, comm);
-                procInfo.push_back({pid, cpu, mem, comm}); 
-            }
+            iss >> user >> pid >> cpu >> mem >> vsz >> rss >> tty >> stat >> start >> time >> comm;
+            getline(iss >> ws, comm);
+
+            procInfo.push_back({pid, cpu, mem, comm});
         }
         pclose(pipe);
 
         for (const auto& proc : procInfo) {
-            string processName = proc.command;
-            
-            if (procName == "all") {
+            string processName = proc.comm;
+            if (procName == "all" || processName.find(procName) != string::npos) {
                 if (processName.length() > maxProcLen) {
                     processName = processName.substr(0, maxProcLen - 3) + "...";
                 }
-
                 counterOfProc++;
-
-                cout << "";
-            }
-            else if (processName.find(procName) != string::npos) {
-                if (processName.length() > maxProcLen) {
-                    processName = processName.substr(0, maxProcLen - 3) + "...";
-                }
-
-                counterOfProc++;
-                cout << "";
-            }
-    
-            if (procName == "all") {
-                cout << "Count of working processes: " << counterOfProc << "\n"; 
-            }
-            else {
-                cout << "Count of " << procName << " processes: " << counterOfProc << "\n"; 
-            }
-    
-            if (kbhit()) {
-                char c = getchar();
-                if (c == 'q') {
-                    break;
-                }
+                cout << setw(10) << proc.pid << "\t"
+                     << setw(8) << fixed << setprecision(2) << proc.cpu << "\t"
+                     << setw(8) << fixed << setprecision(2) << proc.mem << "\t"
+                     << processName << "\n";
             }
         }
+
+        if (procName == "all") {
+            cout << "Count of working processes: " << counterOfProc << "\n"; 
+        }
+        else {
+            cout << "Count of " << procName << " processes: " << counterOfProc << "\n"; 
+        }
+
+        // if (kbhit()) { ... }
+
         this_thread::sleep_for(chrono::milliseconds(200));
     }
 
-    setRawMode(false);
+    // setRawMode(false);
     system("clear");
 
     return 0;
